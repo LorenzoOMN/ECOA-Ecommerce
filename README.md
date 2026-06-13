@@ -410,7 +410,7 @@ Este projeto está licenciado sob a licença MIT.
 
 **Lorenzo**
 
-GitHub: https://github.com/seu-usuario
+GitHub: https://github.com/LorenzoOMN
 
 LinkedIn: https://linkedin.com/in/seu-usuario
 
