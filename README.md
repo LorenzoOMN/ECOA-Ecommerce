@@ -1,4 +1,4 @@
-# <h1 align="center"> ECOA<h1/>
+# <h1 align="center">🍀 ECOA 🍀<h1/>
 
 <p align="center">
   <strong>Plataforma web para apresentação e comercialização de peças de cerâmica artesanal.</strong>
