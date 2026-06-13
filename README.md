@@ -1,4 +1,4 @@
-# <h1 align="center">🍀 ECOA 🍀<h1/>
+<h1 align="center">🍀 ECOA 🍀</h1>
 
 <p align="center">
   <strong>Plataforma web para apresentação e comercialização de peças de cerâmica artesanal.</strong>
@@ -406,16 +406,40 @@ Este projeto está licenciado sob a licença MIT.
 
 ---
 
-# Autor
+## Desenvolvedor
 
-**Lorenzo**
+<div align="center">
 
-GitHub: https://github.com/LorenzoOMN
+<img src="./docs/profile.png" width="120" alt="Lorenzo Oliveira">
 
-LinkedIn: https://linkedin.com/in/seu-usuario
+### Lorenzo Oliveira
+
+Desenvolvedor Full Stack focado no desenvolvimento de aplicações web modernas, intuitivas e escaláveis.
+
+<br>
+
+<strong>Stack Principal</strong>
+
+Next.js • TypeScript • Node.js • PostgreSQL • Supabase
+
+<br><br>
+
+<a href="https://github.com/LorenzoOMN">
+  <img src="https://img.shields.io/badge/GitHub-LorenzoOMN-181717?style=for-the-badge&logo=github&logoColor=white">
+</a>
+
+<a href="https://linkedin.com/in/seu-linkedin">
+  <img src="https://img.shields.io/badge/LinkedIn-Perfil-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white">
+</a>
+
+<a href="mailto:seuemail@email.com">
+  <img src="https://img.shields.io/badge/Email-Contato-EA4335?style=for-the-badge&logo=gmail&logoColor=white">
+</a>
+
+</div>
 
 ---
 
 <p align="center">
-  Desenvolvido com Next.js, TypeScript e Supabase.
+  Desenvolvido com dedicação utilizando Next.js, TypeScript e Supabase.
 </p>
