@@ -2,9 +2,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { 
-    ArrowLeft, TrendingUp, DollarSign, Package, ShoppingCart, 
-    Plus, Calendar, Filter, Trash2, Edit2, CheckCircle, 
+import {
+    ArrowLeft, TrendingUp, DollarSign, Package, ShoppingCart,
+    Plus, Calendar, Filter, Trash2, Edit2, CheckCircle,
     XCircle, Clock, Eye, Zap
 } from 'lucide-react';
 import Link from 'next/link';
@@ -27,6 +27,7 @@ interface Produto {
     nome: string;
     preco: number;
     imagem_url: string;
+    estoque: number;
 }
 
 type Periodo = '7' | '30' | 'mes' | 'todos';
@@ -35,19 +36,19 @@ export default function Dashboard() {
     const router = useRouter();
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    
+
     const [vendas, setVendas] = useState<Venda[]>([]);
     const [produtos, setProdutos] = useState<Produto[]>([]);
     const [periodo, setPeriodo] = useState<Periodo>('30');
     const [dataInicio, setDataInicio] = useState('');
     const [dataFim, setDataFim] = useState('');
     const [filtroStatus, setFiltroStatus] = useState<string>('todos');
-    
+
     const [modalRegistro, setModalRegistro] = useState(false);
     const [modalEditar, setModalEditar] = useState(false);
     const [modalDetalhes, setModalDetalhes] = useState<Venda | null>(null);
     const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
-    
+
     const [modal, setModal] = useState<{
         isOpen: boolean;
         title: string;
@@ -86,17 +87,17 @@ export default function Dashboard() {
     const carregarVendas = async () => {
         try {
             let query = supabase.from('vendas').select('*').order('data_venda', { ascending: false });
-            
+
             if (periodo !== 'todos') {
                 const dias = periodo === 'mes' ? 30 : parseInt(periodo);
                 const dataLimite = new Date();
                 dataLimite.setDate(dataLimite.getDate() - dias);
                 query = query.gte('data_venda', dataLimite.toISOString());
             }
-            
+
             if (dataInicio) query = query.gte('data_venda', dataInicio);
             if (dataFim) query = query.lte('data_venda', dataFim + 'T23:59:59');
-            
+
             const { data, error } = await query;
             if (error) throw error;
             setVendas(data || []);
@@ -109,18 +110,57 @@ export default function Dashboard() {
         try {
             const { data, error } = await supabase
                 .from('produtos')
-                .select('id, nome, preco, imagem_url')
+                .select('id, nome, preco, imagem_url, estoque')
                 .order('nome');
             if (error) throw error;
-            setProdutos(data || []);
+            setProdutos(data?.map(p => ({
+                ...p,
+                estoque: p.estoque || 0
+            })) || []);
         } catch (error) {
             console.error('Erro ao carregar produtos:', error);
         }
     };
 
+    const handleAtualizarEstoque = async (produtoId: string, quantidade: number, tipo: 'entrada' | 'saida' | 'ajuste', motivo: string) => {
+        try {
+            const { data: produto, error: fetchError } = await supabase
+                .from('produtos')
+                .select('estoque')
+                .eq('id', produtoId)
+                .single();
+
+            if (fetchError) throw fetchError;
+
+            const novoEstoque = tipo === 'ajuste' ? quantidade : produto.estoque + quantidade;
+
+            const { error: updateError } = await supabase
+                .from('produtos')
+                .update({ estoque: novoEstoque })
+                .eq('id', produtoId);
+
+            if (updateError) throw updateError;
+
+            const { error: movError } = await supabase
+                .from('movimentacoes_estoque')
+                .insert({
+                    produto_id: produtoId,
+                    tipo,
+                    quantidade: Math.abs(quantidade),
+                    motivo,
+                });
+
+            if (movError) throw movError;
+
+        } catch (error) {
+            console.error('Erro ao atualizar estoque:', error);
+            throw error;
+        }
+    };
+
     // Calcular métricas
-    const vendasFiltradas = filtroStatus === 'todos' 
-        ? vendas 
+    const vendasFiltradas = filtroStatus === 'todos'
+        ? vendas
         : vendas.filter(v => v.status === filtroStatus);
 
     const totalVendas = vendasFiltradas.length;
@@ -132,12 +172,12 @@ export default function Dashboard() {
     const vendasPorDia = (() => {
         const dias = periodo === '7' ? 7 : periodo === '30' || periodo === 'mes' ? 30 : 7;
         const mapa: { dia: string; valor: number; quantidade: number }[] = [];
-        
+
         for (let i = dias - 1; i >= 0; i--) {
             const data = new Date();
             data.setDate(data.getDate() - i);
             const dataStr = data.toISOString().split('T')[0];
-            const vendasDoDia = vendasFiltradas.filter(v => 
+            const vendasDoDia = vendasFiltradas.filter(v =>
                 v.data_venda.split('T')[0] === dataStr
             );
             mapa.push({
@@ -191,6 +231,26 @@ export default function Dashboard() {
         const valorTotal = valorUnitario * quantidade;
 
         try {
+            // Verificar estoque se tem produto_id
+            if (formVenda.produto_id) {
+                const { data: produto } = await supabase
+                    .from('produtos')
+                    .select('estoque')
+                    .eq('id', formVenda.produto_id)
+                    .single();
+
+                if (produto && produto.estoque < quantidade) {
+                    setModal({
+                        isOpen: true,
+                        title: 'Estoque insuficiente',
+                        message: `Apenas ${produto.estoque} unidade(s) disponível(is).`,
+                        type: 'error',
+                    });
+                    return;
+                }
+            }
+
+            // Inserir venda
             const { error } = await supabase.from('vendas').insert({
                 produto_id: formVenda.produto_id || null,
                 produto_nome: formVenda.produto_nome,
@@ -204,11 +264,21 @@ export default function Dashboard() {
 
             if (error) throw error;
 
+            // Descontar do estoque se tem produto_id
+            if (formVenda.produto_id && formVenda.status === 'concluida') {
+                await handleAtualizarEstoque(
+                    formVenda.produto_id,
+                    -quantidade,
+                    'saida',
+                    `Venda registrada - ${formVenda.produto_nome}`
+                );
+            }
+
             setModal({ isOpen: true, title: 'Venda registrada!', message: `${formVenda.produto_nome} vendido com sucesso!`, type: 'success' });
             setModalRegistro(false);
             resetarFormVenda();
             setProdutoSelecionado(null);
-            await carregarVendas();
+            await Promise.all([carregarVendas(), carregarProdutos()]);
         } catch (error: any) {
             setModal({ isOpen: true, title: 'Erro', message: error.message, type: 'error' });
         }
@@ -428,19 +498,19 @@ export default function Dashboard() {
                         ) : (
                             <div className="flex items-end justify-between gap-1 h-64 px-2">
                                 {vendasPorDia.map((dia, idx) => {
-                                    const mostrarLabel = periodo === '7' 
-                                        ? true 
+                                    const mostrarLabel = periodo === '7'
+                                        ? true
                                         : periodo === '30' || periodo === 'mes'
-                                        ? idx % 3 === 0
-                                        : idx % 5 === 0;
-                                    
+                                            ? idx % 3 === 0
+                                            : idx % 5 === 0;
+
                                     const altura = dia.valor > 0 ? (dia.valor / maxValorDia) * 100 : 0;
 
                                     return (
                                         <div key={idx} className="flex-1 flex flex-col items-center gap-2 group">
                                             <div className="relative w-full flex flex-col justify-end h-48">
                                                 {dia.valor > 0 ? (
-                                                    <div 
+                                                    <div
                                                         className="w-full bg-gradient-to-t from-[#7A8B6F] to-[#A895B5] rounded-t-lg transition-all group-hover:from-[#A895B5] group-hover:to-[#7A8B6F] relative cursor-pointer"
                                                         style={{ height: `${altura}%` }}
                                                     >
@@ -481,12 +551,11 @@ export default function Dashboard() {
                             <div className="space-y-4">
                                 {produtosMaisVendidos.map((prod, idx) => (
                                     <div key={idx} className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                                            idx === 0 ? 'bg-[#C9A87C] text-white' :
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${idx === 0 ? 'bg-[#C9A87C] text-white' :
                                             idx === 1 ? 'bg-[#A895B5] text-white' :
-                                            idx === 2 ? 'bg-[#8FA895] text-white' :
-                                            'bg-gray-200 text-gray-600'
-                                        }`}>
+                                                idx === 2 ? 'bg-[#8FA895] text-white' :
+                                                    'bg-gray-200 text-gray-600'
+                                            }`}>
                                             {idx + 1}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -518,13 +587,13 @@ export default function Dashboard() {
                     ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {produtos.map((produto) => (
-                                <div 
-                                    key={produto.id} 
+                                <div
+                                    key={produto.id}
                                     className="border border-gray-200 rounded-xl p-4 hover:border-[#A895B5] hover:shadow-md transition-all group"
                                 >
                                     <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 mb-3">
-                                        <img 
-                                            src={produto.imagem_url} 
+                                        <img
+                                            src={produto.imagem_url}
                                             alt={produto.nome}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                         />
@@ -665,31 +734,48 @@ export default function Dashboard() {
                         </button>
                         <h3 className="text-2xl font-bold text-[#3D3D3D] mb-6 flex items-center gap-2">
                             <Zap className="text-[#A895B5]" />
-                            {produtoSelecionado ? 'Venda Rápida' : 'Registrar Venda'}
+                            Registrar Venda
                         </h3>
                         <form onSubmit={handleRegistrarVenda} className="space-y-4">
-                            {produtoSelecionado && (
-                                <div className="flex items-center gap-3 p-4 bg-[#A895B5]/10 rounded-xl border border-[#A895B5]/30">
-                                    <img src={produtoSelecionado.imagem_url} alt="" className="w-16 h-16 object-cover rounded-lg" />
-                                    <div>
-                                        <p className="font-bold text-[#3D3D3D]">{produtoSelecionado.nome}</p>
-                                        <p className="text-[#7A8B6F] font-semibold">{formatarMoeda(produtoSelecionado.preco)}</p>
-                                    </div>
-                                </div>
-                            )}
-                            
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Produto *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formVenda.produto_nome}
-                                    onChange={(e) => setFormVenda({...formVenda, produto_nome: e.target.value})}
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Produto *</label>
+                                <select
+                                    value={formVenda.produto_id}
+                                    onChange={(e) => {
+                                        const produto = produtos.find(p => p.id === e.target.value);
+                                        if (produto) {
+                                            setFormVenda({
+                                                ...formVenda,
+                                                produto_id: produto.id,
+                                                produto_nome: produto.nome,
+                                                valor_unitario: produto.preco.toString(),
+                                            });
+                                        } else {
+                                            setFormVenda({ ...formVenda, produto_id: '', produto_nome: '', valor_unitario: '' });
+                                        }
+                                    }}
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#A895B5]"
-                                    placeholder="Digite o nome do produto"
-                                />
+                                    required
+                                >
+                                    <option value="">Selecione um produto</option>
+                                    {produtos
+                                        .filter(p => p.estoque > 0)
+                                        .map(p => (
+                                            <option key={p.id} value={p.id}>
+                                                {p.nome} - {formatarMoeda(p.preco)} ({p.estoque} em estoque)
+                                            </option>
+                                        ))
+                                    }
+                                </select>
+
+                                {/* Aviso de produtos sem estoque */}
+                                {produtos.filter(p => p.estoque === 0).length > 0 && (
+                                    <p className="text-xs text-red-500 mt-1">
+                                        ⚠️ {produtos.filter(p => p.estoque === 0).length} produto(s) sem estoque - bloqueados para venda
+                                    </p>
+                                )}
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
@@ -697,38 +783,38 @@ export default function Dashboard() {
                                         type="number"
                                         min="1"
                                         value={formVenda.quantidade}
-                                        onChange={(e) => setFormVenda({...formVenda, quantidade: e.target.value})}
+                                        onChange={(e) => setFormVenda({ ...formVenda, quantidade: e.target.value })}
                                         className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#A895B5]"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Valor Unitário (R$) *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Valor Unitário (R$)</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         required
                                         value={formVenda.valor_unitario}
-                                        onChange={(e) => setFormVenda({...formVenda, valor_unitario: e.target.value})}
+                                        onChange={(e) => setFormVenda({ ...formVenda, valor_unitario: e.target.value })}
                                         className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#A895B5]"
                                     />
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Data da Venda</label>
                                 <input
                                     type="date"
                                     value={formVenda.data_venda}
-                                    onChange={(e) => setFormVenda({...formVenda, data_venda: e.target.value})}
+                                    onChange={(e) => setFormVenda({ ...formVenda, data_venda: e.target.value })}
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#A895B5]"
                                 />
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                                 <select
                                     value={formVenda.status}
-                                    onChange={(e) => setFormVenda({...formVenda, status: e.target.value})}
+                                    onChange={(e) => setFormVenda({ ...formVenda, status: e.target.value })}
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#A895B5]"
                                 >
                                     <option value="concluida">Concluída ✓</option>
@@ -736,18 +822,18 @@ export default function Dashboard() {
                                     <option value="cancelada">Cancelada ✕</option>
                                 </select>
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
                                 <textarea
                                     rows={2}
                                     value={formVenda.observacoes}
-                                    onChange={(e) => setFormVenda({...formVenda, observacoes: e.target.value})}
+                                    onChange={(e) => setFormVenda({ ...formVenda, observacoes: e.target.value })}
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#A895B5]"
                                     placeholder="Ex: Cliente pagou via Pix, entrega combinada..."
                                 />
                             </div>
-                            
+
                             <button type="submit" className="w-full btn-lilas">
                                 Confirmar Venda
                             </button>
@@ -775,7 +861,7 @@ export default function Dashboard() {
                                     type="text"
                                     required
                                     value={formVenda.produto_nome}
-                                    onChange={(e) => setFormVenda({...formVenda, produto_nome: e.target.value})}
+                                    onChange={(e) => setFormVenda({ ...formVenda, produto_nome: e.target.value })}
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
                                 />
                             </div>
@@ -786,7 +872,7 @@ export default function Dashboard() {
                                         type="number"
                                         min="1"
                                         value={formVenda.quantidade}
-                                        onChange={(e) => setFormVenda({...formVenda, quantidade: e.target.value})}
+                                        onChange={(e) => setFormVenda({ ...formVenda, quantidade: e.target.value })}
                                         className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
                                     />
                                 </div>
@@ -796,7 +882,7 @@ export default function Dashboard() {
                                         type="number"
                                         step="0.01"
                                         value={formVenda.valor_unitario}
-                                        onChange={(e) => setFormVenda({...formVenda, valor_unitario: e.target.value})}
+                                        onChange={(e) => setFormVenda({ ...formVenda, valor_unitario: e.target.value })}
                                         className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
                                     />
                                 </div>
@@ -806,7 +892,7 @@ export default function Dashboard() {
                                 <input
                                     type="date"
                                     value={formVenda.data_venda}
-                                    onChange={(e) => setFormVenda({...formVenda, data_venda: e.target.value})}
+                                    onChange={(e) => setFormVenda({ ...formVenda, data_venda: e.target.value })}
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
                                 />
                             </div>
@@ -814,7 +900,7 @@ export default function Dashboard() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                                 <select
                                     value={formVenda.status}
-                                    onChange={(e) => setFormVenda({...formVenda, status: e.target.value})}
+                                    onChange={(e) => setFormVenda({ ...formVenda, status: e.target.value })}
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
                                 >
                                     <option value="concluida">Concluída</option>
@@ -827,7 +913,7 @@ export default function Dashboard() {
                                 <textarea
                                     rows={2}
                                     value={formVenda.observacoes}
-                                    onChange={(e) => setFormVenda({...formVenda, observacoes: e.target.value})}
+                                    onChange={(e) => setFormVenda({ ...formVenda, observacoes: e.target.value })}
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
                                 />
                             </div>

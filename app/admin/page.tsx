@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Upload, Save, ArrowLeft, Edit2, Trash2, X, Package, LogOut } from 'lucide-react';
+import { Upload, Save, ArrowLeft, Edit2, Trash2, X, Package, LogOut, Plus, Minus } from 'lucide-react';
 import Link from 'next/link';
 import Modal from '../components/Modal';
 import { TrendingUp } from 'lucide-react';
@@ -12,6 +12,8 @@ interface Produto {
     descricao: string;
     preco: number;
     imagem_url: string;
+    estoque: number;
+    estoque_minimo: number;
 }
 
 export default function Admin() {
@@ -24,6 +26,17 @@ export default function Admin() {
     const [produtos, setProdutos] = useState<Produto[]>([]);
     const [modoEdicao, setModoEdicao] = useState(false);
     const [produtoEditando, setProdutoEditando] = useState<string | null>(null);
+
+    const [modalEstoque, setModalEstoque] = useState<{
+        isOpen: boolean;
+        produto: Produto | null;
+    }>({ isOpen: false, produto: null });
+
+    const [formEstoque, setFormEstoque] = useState({
+        tipo: 'entrada' as 'entrada' | 'saida' | 'ajuste',
+        quantidade: '0',
+        motivo: '',
+    });
 
     const [modal, setModal] = useState<{
         isOpen: boolean;
@@ -41,10 +54,10 @@ export default function Admin() {
     const [nome, setNome] = useState('');
     const [descricao, setDescricao] = useState('');
     const [preco, setPreco] = useState('');
+    const [estoque, setEstoque] = useState('0');
     const [imagem, setImagem] = useState<File | null>(null);
     const [imagemAtual, setImagemAtual] = useState<string>('');
 
-    // Verificar se está logado
     useEffect(() => {
         const checkUser = async () => {
             const { data: { session } } = await supabase.auth.getSession();
@@ -60,7 +73,6 @@ export default function Admin() {
         return () => subscription.unsubscribe();
     }, []);
 
-    // Carregar produtos quando logar
     useEffect(() => {
         if (user) {
             carregarProdutos();
@@ -114,6 +126,7 @@ export default function Admin() {
         setNome('');
         setDescricao('');
         setPreco('');
+        setEstoque('0');
         setImagem(null);
         setImagemAtual('');
         setModoEdicao(false);
@@ -156,7 +169,13 @@ export default function Admin() {
             if (modoEdicao && produtoEditando) {
                 const { error: dbError } = await supabase
                     .from('produtos')
-                    .update({ nome, descricao, preco: parseFloat(preco.replace(',', '.')), imagem_url })
+                    .update({ 
+                        nome, 
+                        descricao, 
+                        preco: parseFloat(preco.replace(',', '.')), 
+                        estoque: parseInt(estoque) || 0,
+                        imagem_url 
+                    })
                     .eq('id', produtoEditando);
 
                 if (dbError) throw dbError;
@@ -170,7 +189,13 @@ export default function Admin() {
             } else {
                 const { error: dbError } = await supabase
                     .from('produtos')
-                    .insert({ nome, descricao, preco: parseFloat(preco.replace(',', '.')), imagem_url });
+                    .insert({ 
+                        nome, 
+                        descricao, 
+                        preco: parseFloat(preco.replace(',', '.')), 
+                        estoque: parseInt(estoque) || 0,
+                        imagem_url 
+                    });
 
                 if (dbError) throw dbError;
 
@@ -203,6 +228,7 @@ export default function Admin() {
         setNome(produto.nome);
         setDescricao(produto.descricao || '');
         setPreco(produto.preco.toString());
+        setEstoque(produto.estoque?.toString() || '0');
         setImagemAtual(produto.imagem_url);
         setImagem(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -246,6 +272,54 @@ export default function Admin() {
         });
     };
 
+    const handleAtualizarEstoque = async (produtoId: string, quantidade: number, tipo: 'entrada' | 'saida' | 'ajuste', motivo: string) => {
+        try {
+            const { data: produto, error: fetchError } = await supabase
+                .from('produtos')
+                .select('estoque')
+                .eq('id', produtoId)
+                .single();
+
+            if (fetchError) throw fetchError;
+
+            const novoEstoque = tipo === 'ajuste' ? quantidade : produto.estoque + quantidade;
+
+            const { error: updateError } = await supabase
+                .from('produtos')
+                .update({ estoque: novoEstoque })
+                .eq('id', produtoId);
+
+            if (updateError) throw updateError;
+
+            const { error: movError } = await supabase
+                .from('movimentacoes_estoque')
+                .insert({
+                    produto_id: produtoId,
+                    tipo,
+                    quantidade: Math.abs(quantidade),
+                    motivo,
+                });
+
+            if (movError) throw movError;
+
+            setModal({
+                isOpen: true,
+                title: 'Estoque atualizado!',
+                message: `Estoque atualizado com sucesso. Novo total: ${novoEstoque} unidades.`,
+                type: 'success',
+            });
+
+            await carregarProdutos();
+        } catch (error: any) {
+            setModal({
+                isOpen: true,
+                title: 'Erro ao atualizar estoque',
+                message: error.message,
+                type: 'error',
+            });
+        }
+    };
+
     const formatarPreco = (preco: number) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(preco);
     };
@@ -262,7 +336,6 @@ export default function Admin() {
         );
     }
 
-    // TELA DE LOGIN
     if (!user) {
         return (
             <>
@@ -326,7 +399,6 @@ export default function Admin() {
         );
     }
 
-    // PAINEL ADMIN
     return (
         <>
             <main className="min-h-screen bg-[#FAF7F2] p-4 md:p-8">
@@ -391,17 +463,30 @@ export default function Admin() {
                                     />
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Preço (R$) *</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        required
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
-                                        value={preco}
-                                        onChange={(e) => setPreco(e.target.value)}
-                                        placeholder="0,00"
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Preço (R$) *</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            required
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
+                                            value={preco}
+                                            onChange={(e) => setPreco(e.target.value)}
+                                            placeholder="0,00"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Estoque Inicial</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
+                                            value={estoque}
+                                            onChange={(e) => setEstoque(e.target.value)}
+                                            placeholder="0"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div>
@@ -482,6 +567,24 @@ export default function Admin() {
                                                     <p className="text-lg font-bold text-[#7A8B6F] mt-2">
                                                         {formatarPreco(produto.preco)}
                                                     </p>
+                                                    <div className="flex items-center gap-2 mt-2">
+                                                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                                                            produto.estoque === 0 ? 'bg-red-100 text-red-600' :
+                                                            produto.estoque <= (produto.estoque_minimo || 2) ? 'bg-[#C9A87C]/20 text-[#8B7355]' :
+                                                            'bg-[#8FA895]/20 text-[#7A8B6F]'
+                                                        }`}>
+                                                            {produto.estoque === 0 ? 'Sem estoque' : `${produto.estoque} em estoque`}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => {
+                                                                setFormEstoque({ tipo: 'entrada', quantidade: '1', motivo: '' });
+                                                                setModalEstoque({ isOpen: true, produto });
+                                                            }}
+                                                            className="text-xs text-[#A895B5] hover:text-[#9B8AA8] font-medium"
+                                                        >
+                                                            Gerenciar
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -509,6 +612,109 @@ export default function Admin() {
                     </div>
                 </div>
             </main>
+
+            {modalEstoque.isOpen && modalEstoque.produto && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-[#3D3D3D]/60 backdrop-blur-sm" onClick={() => setModalEstoque({ isOpen: false, produto: null })}></div>
+                    <div className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full border-4 border-[#A895B5] p-8">
+                        <button onClick={() => setModalEstoque({ isOpen: false, produto: null })} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                            <X size={24} />
+                        </button>
+                        <h3 className="text-2xl font-bold text-[#3D3D3D] mb-6">Gerenciar Estoque</h3>
+
+                        <div className="bg-gray-50 p-4 rounded-xl mb-6">
+                            <p className="text-sm text-gray-600 mb-1">Produto</p>
+                            <p className="font-bold text-[#3D3D3D]">{modalEstoque.produto.nome}</p>
+                            <p className="text-sm text-gray-600 mt-2">Estoque atual</p>
+                            <p className="text-2xl font-bold text-[#7A8B6F]">{modalEstoque.produto.estoque} unidades</p>
+                        </div>
+
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            const qtd = parseInt(formEstoque.quantidade);
+                            if (isNaN(qtd) || qtd <= 0) {
+                                setModal({ isOpen: true, title: 'Quantidade inválida', message: 'Digite uma quantidade válida.', type: 'warning' });
+                                return;
+                            }
+
+                            const quantidadeFinal = formEstoque.tipo === 'saida' ? -qtd : qtd;
+                            await handleAtualizarEstoque(
+                                modalEstoque.produto!.id,
+                                quantidadeFinal,
+                                formEstoque.tipo,
+                                formEstoque.motivo
+                            );
+                            setModalEstoque({ isOpen: false, produto: null });
+                        }} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Movimentação</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormEstoque({ ...formEstoque, tipo: 'entrada' })}
+                                        className={`p-3 rounded-lg border-2 transition-all ${formEstoque.tipo === 'entrada'
+                                                ? 'border-[#8FA895] bg-[#8FA895]/10 text-[#7A8B6F]'
+                                                : 'border-gray-200 text-gray-600'
+                                            }`}
+                                    >
+                                        <Plus size={20} className="mx-auto mb-1" />
+                                        <span className="text-xs font-semibold">Entrada</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormEstoque({ ...formEstoque, tipo: 'saida' })}
+                                        className={`p-3 rounded-lg border-2 transition-all ${formEstoque.tipo === 'saida'
+                                                ? 'border-red-400 bg-red-50 text-red-600'
+                                                : 'border-gray-200 text-gray-600'
+                                            }`}
+                                    >
+                                        <Minus size={20} className="mx-auto mb-1" />
+                                        <span className="text-xs font-semibold">Saída</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormEstoque({ ...formEstoque, tipo: 'ajuste' })}
+                                        className={`p-3 rounded-lg border-2 transition-all ${formEstoque.tipo === 'ajuste'
+                                                ? 'border-[#C9A87C] bg-[#C9A87C]/10 text-[#8B7355]'
+                                                : 'border-gray-200 text-gray-600'
+                                            }`}
+                                    >
+                                        <span className="text-2xl mx-auto mb-1">±</span>
+                                        <span className="text-xs font-semibold">Ajuste</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    required
+                                    value={formEstoque.quantidade}
+                                    onChange={(e) => setFormEstoque({ ...formEstoque, quantidade: e.target.value })}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#A895B5]"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Motivo (opcional)</label>
+                                <input
+                                    type="text"
+                                    value={formEstoque.motivo}
+                                    onChange={(e) => setFormEstoque({ ...formEstoque, motivo: e.target.value })}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#A895B5]"
+                                    placeholder="Ex: Nova remessa, venda, quebra..."
+                                />
+                            </div>
+
+                            <button type="submit" className="w-full btn-lilas">
+                                Confirmar Movimentação
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             <Modal
                 isOpen={modal.isOpen}

@@ -17,6 +17,7 @@ interface Produto {
     descricao: string;
     preco: number;
     imagem_url: string;
+    estoque: number;
     imagens?: Imagem[];
 }
 
@@ -32,10 +33,13 @@ export default function Catalogo() {
         try {
             const { data: produtosData, error } = await supabase
                 .from('produtos')
-                .select('*')
+                .select('id, nome, descricao, preco, imagem_url, estoque')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                console.error('Erro ao buscar produtos:', error);
+                throw error;
+            }
 
             const produtosComImagens = await Promise.all(
                 (produtosData || []).map(async (produto) => {
@@ -47,6 +51,7 @@ export default function Catalogo() {
 
                     return {
                         ...produto,
+                        estoque: produto.estoque || 0,
                         imagens: imagensData || [],
                     };
                 })
@@ -54,7 +59,7 @@ export default function Catalogo() {
 
             setProdutos(produtosComImagens);
         } catch (error) {
-            console.error(error);
+            console.error('Erro ao carregar produtos:', error);
         } finally {
             setLoading(false);
         }
