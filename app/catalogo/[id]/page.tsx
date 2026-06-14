@@ -65,7 +65,10 @@ export default function ProdutoDetalhe() {
     const gerarLinkWhatsApp = () => {
         if (!produto) return '#';
         const numero = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
-        const mensagem = 'Ola! Vi a peca "' + produto.nome + '" no site da ECOA e tenho interesse.';
+
+        // Formata o preço corretamente com 2 casas decimais
+        const precoFormatado = produto.preco.toFixed(2).replace('.', ',');
+        const mensagem = `Olá! Vi a peça "${produto.nome}", que está custando "R$ ${precoFormatado}" no site da ECOA e tenho interesse.`;
         return 'https://wa.me/' + numero + '?text=' + encodeURIComponent(mensagem);
     };
 
@@ -95,8 +98,8 @@ export default function ProdutoDetalhe() {
         );
     }
 
-    const imagens = produto.imagens.length > 0 
-        ? produto.imagens 
+    const imagens = produto.imagens.length > 0
+        ? produto.imagens
         : [{ id: 'main', imagem_url: produto.imagem_url, ordem: 0 }];
 
     return (
@@ -116,7 +119,7 @@ export default function ProdutoDetalhe() {
 
             <div className="max-w-6xl mx-auto px-4 py-8 md:py-12">
                 <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-                    
+
                     {/* ===== GALERIA ===== */}
                     <div>
                         {/* Imagem Principal */}
@@ -161,11 +164,10 @@ export default function ProdutoDetalhe() {
                                     <button
                                         key={img.id}
                                         onClick={() => setImagemAtual(index)}
-                                        className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${
-                                            imagemAtual === index
+                                        className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${imagemAtual === index
                                                 ? 'border-[#A895B5] shadow-md scale-105'
                                                 : 'border-transparent opacity-60 hover:opacity-100'
-                                        }`}
+                                            }`}
                                     >
                                         <img
                                             src={img.imagem_url}
