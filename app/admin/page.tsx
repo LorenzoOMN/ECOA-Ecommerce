@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Upload, Save, ArrowLeft, Edit2, Trash2, X, Package, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import Modal from '../components/Modal';
+import { TrendingUp } from 'lucide-react';
 
 interface Produto {
     id: string;
@@ -19,7 +20,7 @@ export default function Admin() {
     const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
     const [loginError, setLoginError] = useState('');
-    
+
     const [produtos, setProdutos] = useState<Produto[]>([]);
     const [modoEdicao, setModoEdicao] = useState(false);
     const [produtoEditando, setProdutoEditando] = useState<string | null>(null);
@@ -274,7 +275,7 @@ export default function Admin() {
                             <h2 className="text-2xl font-bold text-[#3D3D3D]">Área Restrita</h2>
                             <p className="text-sm text-gray-500 mt-2">Faça login para acessar o painel administrativo</p>
                         </div>
-                        
+
                         <form onSubmit={handleLogin} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -298,16 +299,16 @@ export default function Admin() {
                                     placeholder="••••••••"
                                 />
                             </div>
-                            
+
                             {loginError && (
                                 <p className="text-red-500 text-sm text-center">{loginError}</p>
                             )}
-                            
+
                             <button type="submit" className="w-full btn-lilas">
                                 Entrar
                             </button>
                         </form>
-                        
+
                         <Link href="/" className="block text-center mt-4 text-sm text-gray-500 hover:underline">
                             Voltar para o site
                         </Link>
@@ -331,9 +332,15 @@ export default function Admin() {
             <main className="min-h-screen bg-[#FAF7F2] p-4 md:p-8">
                 <div className="max-w-6xl mx-auto">
                     <div className="flex items-center justify-between mb-8">
-                        <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-[#7A8B6F]">
-                            <ArrowLeft size={20} /> Voltar para a loja
-                        </Link>
+                        <div className="flex items-center gap-4">
+                            <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-[#7A8B6F]">
+                                <ArrowLeft size={20} /> Voltar para a loja
+                            </Link>
+                            <Link href="/admin/dashboard" className="flex items-center gap-2 px-4 py-2 bg-[#A895B5] text-white rounded-lg font-medium hover:bg-[#9B8AA8] transition-colors text-sm">
+                                <TrendingUp size={16} />
+                                Dashboard
+                            </Link>
+                        </div>
                         <button
                             onClick={handleLogout}
                             className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 rounded-lg font-medium hover:bg-red-200 transition-colors text-sm"
@@ -424,7 +431,7 @@ export default function Admin() {
                                             </>
                                         )}
                                     </button>
-                                    
+
                                     {modoEdicao && (
                                         <button
                                             type="button"
@@ -456,11 +463,10 @@ export default function Admin() {
                                     {produtos.map((produto) => (
                                         <div
                                             key={produto.id}
-                                            className={`border rounded-xl p-4 transition-all ${
-                                                produtoEditando === produto.id
-                                                    ? 'border-[#A895B5] bg-[#A895B5]/5'
-                                                    : 'border-gray-200 hover:border-[#8FA895]'
-                                            }`}
+                                            className={`border rounded-xl p-4 transition-all ${produtoEditando === produto.id
+                                                ? 'border-[#A895B5] bg-[#A895B5]/5'
+                                                : 'border-gray-200 hover:border-[#8FA895]'
+                                                }`}
                                         >
                                             <div className="flex gap-4">
                                                 <img
