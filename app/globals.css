@@ -1,19 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #FDFBF7;
-  --color-foreground: #4A4A48;
-  --color-primary: #E8D5C4;
-  --color-secondary: #D4E2D4;
-  --color-accent: #B8C5D6;
+  /* Paleta EQUILIBRADA - Verde sálvia e lilás lavanda */
+  --color-background: #FAF7F2;        /* Creme quente (não branco puro) */
+  --color-foreground: #3D3D3D;        /* Cinza escuro suave */
+  --color-primary: #7A8B6F;           /* Verde sálvia médio */
+  --color-secondary: #A895B5;         /* Lilás lavanda médio */
+  --color-accent: #8FA895;            /* Verde menta suave */
+  --color-warm: #C9A87C;              /* Dourado terroso */
+  --color-cool: #9BA8B5;              /* Azul acinzentado */
+  --color-earth: #6B7B5F;             /* Verde floresta (para destaques) */
+  
+  /* Cores para seções */
+  --color-section-warm: #F0EBE3;      /* Bege quente para seções */
+  --color-section-cool: #E8E6E1;      /* Cinza quente */
 }
 
 :root {
-  --background: #FDFBF7;
-  --foreground: #4A4A48;
-  --primary: #E8D5C4;
-  --secondary: #D4E2D4;
-  --accent: #B8C5D6;
+  --background: #FAF7F2;
+  --foreground: #3D3D3D;
+  --primary: #7A8B6F;
+  --secondary: #A895B5;
+  --accent: #8FA895;
 }
 
 body {
@@ -23,9 +31,13 @@ body {
 }
 
 .btn-ecoa {
-  @apply bg-[#E8D5C4] text-[#4A4A48] px-6 py-3 rounded-full font-medium transition-all hover:bg-[#d4c0ad] hover:shadow-md flex items-center justify-center gap-2;
+  @apply bg-[#7A8B6F] text-white px-6 py-3 rounded-full font-medium transition-all hover:bg-[#6B7B5F] hover:shadow-lg flex items-center justify-center gap-2;
+}
+
+.btn-lilas {
+  @apply bg-[#A895B5] text-white px-6 py-3 rounded-full font-medium transition-all hover:bg-[#9B8AA8] hover:shadow-lg flex items-center justify-center gap-2;
 }
 
 .card-ecoa {
-  @apply bg-white rounded-2xl shadow-sm border border-[#E8D5C4]/30 overflow-hidden transition-transform hover:-translate-y-1 hover:shadow-md;
+  @apply bg-white rounded-2xl shadow-md border border-[#A895B5]/20 overflow-hidden transition-all hover:-translate-y-1 hover:shadow-xl;
 }

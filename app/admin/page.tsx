@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { Upload, Save, ArrowLeft } from 'lucide-react';
@@ -15,10 +15,9 @@ export default function Admin() {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
-    // Senha simples para proteger a página (Mude "ecoa123" para o que quiser)
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
-        if (senha === 'ecoa123') {
+        if (senha === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
             setAutenticado(true);
         } else {
             alert('Senha incorreta!');
@@ -34,7 +33,6 @@ export default function Admin() {
 
         setLoading(true);
         try {
-            // 1. Upload da Imagem
             const fileExt = imagem.name.split('.').pop();
             const fileName = `${Math.random()}.${fileExt}`;
             const { error: uploadError } = await supabase.storage
@@ -43,12 +41,10 @@ export default function Admin() {
 
             if (uploadError) throw uploadError;
 
-            // 2. Pegar URL pública
             const { data: { publicUrl } } = supabase.storage
                 .from('imagens-produtos')
                 .getPublicUrl(fileName);
 
-            // 3. Salvar no Banco de Dados
             const { error: dbError } = await supabase
                 .from('produtos')
                 .insert({
@@ -65,7 +61,7 @@ export default function Admin() {
             setDescricao('');
             setPreco('');
             setImagem(null);
-            router.refresh(); // Atualiza a página principal
+            router.refresh();
 
         } catch (error: any) {
             console.error(error);
@@ -77,13 +73,13 @@ export default function Admin() {
 
     if (!autenticado) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7]">
-                <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-[#E8D5C4]">
-                    <h2 className="text-2xl font-bold text-center mb-6 text-[#4A4A48]">Acesso ECOA</h2>
+            <div className="min-h-screen flex items-center justify-center bg-[#F5F0EB]">
+                <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-[#C9A87C]">
+                    <h2 className="text-2xl font-bold text-center mb-6 text-[#3D3D3D]">Acesso ECOA</h2>
                     <input
                         type="password"
                         placeholder="Digite a senha"
-                        className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-[#B8C5D6]"
+                        className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-[#8FA895]"
                         value={senha}
                         onChange={(e) => setSenha(e.target.value)}
                     />
@@ -97,15 +93,15 @@ export default function Admin() {
     }
 
     return (
-        <main className="min-h-screen bg-[#FDFBF7] p-4 md:p-8">
+        <main className="min-h-screen bg-[#F5F0EB] p-4 md:p-8">
             <div className="max-w-2xl mx-auto">
-                <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-[#4A4A48] mb-8">
+                <Link href="/" className="flex items-center gap-2 text-gray-600 hover:text-[#3D3D3D] mb-8">
                     <ArrowLeft size={20} /> Voltar para a loja
                 </Link>
 
-                <div className="bg-white p-8 rounded-2xl shadow-sm border border-[#E8D5C4]/30">
-                    <h2 className="text-2xl font-bold mb-6 text-[#4A4A48] flex items-center gap-2">
-                        <Upload size={24} className="text-[#D4E2D4]" />
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-[#A89F91]/30">
+                    <h2 className="text-2xl font-bold mb-6 text-[#3D3D3D] flex items-center gap-2">
+                        <Upload size={24} className="text-[#8FA895]" />
                         Cadastrar Nova Peça
                     </h2>
 
@@ -115,7 +111,7 @@ export default function Admin() {
                             <input
                                 type="text"
                                 required
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#B8C5D6]"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
                                 value={nome}
                                 onChange={(e) => setNome(e.target.value)}
                             />
@@ -125,7 +121,7 @@ export default function Admin() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
                             <textarea
                                 rows={3}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#B8C5D6]"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
                                 value={descricao}
                                 onChange={(e) => setDescricao(e.target.value)}
                             />
@@ -137,7 +133,7 @@ export default function Admin() {
                                 type="number"
                                 step="0.01"
                                 required
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#B8C5D6]"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
                                 value={preco}
                                 onChange={(e) => setPreco(e.target.value)}
                             />
