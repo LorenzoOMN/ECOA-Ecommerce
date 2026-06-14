@@ -1,11 +1,12 @@
 'use client';
 import { Sprout, Heart, Hand, Leaf, ArrowRight, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
+import WhatsAppButton from './components/WhatsAppButton';
 
 export default function Home() {
   return (
     <main className="min-h-screen">
-      {/* ===== HEADER ===== */}
+      {/* HEADER */}
       <header className="bg-[#7A8B6F] sticky top-0 z-50 shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2">
@@ -25,27 +26,27 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ===== HERO ===== */}
+      {/* HERO */}
       <section className="relative bg-gradient-to-br from-[#7A8B6F] via-[#8FA895] to-[#A895B5] py-28 md:py-36 px-4 overflow-hidden">
         <div className="absolute top-10 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-10 right-10 w-96 h-96 bg-[#A895B5]/20 rounded-full blur-3xl"></div>
-        
+
         <div className="max-w-6xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 bg-white/25 backdrop-blur-sm px-6 py-3 rounded-full mb-8 border border-white/40">
             <Leaf className="w-5 h-5 text-white" />
             <span className="text-sm text-white font-medium">Cerâmica artesanal com alma</span>
           </div>
-          
+
           <h2 className="text-5xl md:text-7xl font-light text-white mb-6 leading-tight">
             Da Terra <br />
             <span className="font-semibold">à Sua Casa</span>
           </h2>
-          
+
           <p className="text-xl text-white/95 max-w-3xl mx-auto mb-12 leading-relaxed">
-            Peças únicas moldadas à mão com técnicas sustentáveis. 
+            Peças únicas moldadas à mão com técnicas sustentáveis.
             Cada cerâmica carrega a energia da natureza.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/catalogo" className="bg-white text-[#7A8B6F] px-8 py-4 rounded-full font-semibold transition-all hover:bg-[#FAF7F2] hover:shadow-xl text-lg inline-flex items-center gap-2">
               Explorar Coleção <ArrowRight size={20} />
@@ -57,7 +58,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== SOBRE ===== */}
+      {/* SOBRE */}
       <section id="sobre" className="py-24 px-4 bg-[#FAF7F2]">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-16 items-center">
@@ -68,14 +69,14 @@ export default function Home() {
                 <span className="font-semibold text-[#7A8B6F]">com propósito</span>
               </h3>
               <p className="text-gray-700 mb-6 leading-relaxed text-lg">
-                A ECOA nasceu do desejo de criar peças que conectem as pessoas à natureza. 
+                A ECOA nasceu do desejo de criar peças que conectem as pessoas à natureza.
                 Cada cerâmica é moldada à mão, usando técnicas tradicionais e materiais sustentáveis.
               </p>
               <p className="text-gray-700 mb-8 leading-relaxed text-lg">
-                Acreditamos que objetos feitos com intenção carregam energia. 
+                Acreditamos que objetos feitos com intenção carregam energia.
                 Cada peça ECOA é única, com suas imperfeições que a tornam especial.
               </p>
-              
+
               <div className="grid grid-cols-3 gap-6">
                 <div className="bg-white p-6 rounded-2xl shadow-md border border-[#7A8B6F]/20">
                   <div className="text-3xl font-bold text-[#7A8B6F] mb-1">100%</div>
@@ -109,7 +110,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== VALORES ===== */}
+      {/* VALORES */}
       <section className="py-24 px-4 bg-[#F0EBE3]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
@@ -126,7 +127,7 @@ export default function Home() {
               </div>
               <h4 className="text-xl font-semibold text-[#3D3D3D] mb-3">Sustentabilidade</h4>
               <p className="text-gray-700 leading-relaxed">
-                Materiais naturais e processos que respeitam o meio ambiente. 
+                Materiais naturais e processos que respeitam o meio ambiente.
                 Peças feitas para durar gerações.
               </p>
             </div>
@@ -137,7 +138,7 @@ export default function Home() {
               </div>
               <h4 className="text-xl font-semibold text-[#3D3D3D] mb-3">Artesanal</h4>
               <p className="text-gray-700 leading-relaxed">
-                Cada peça moldada à mão, com tempo e dedicação. 
+                Cada peça moldada à mão, com tempo e dedicação.
                 Valorizamos o processo, não a produção em massa.
               </p>
             </div>
@@ -148,7 +149,7 @@ export default function Home() {
               </div>
               <h4 className="text-xl font-semibold text-[#3D3D3D] mb-3">Conexão</h4>
               <p className="text-gray-700 leading-relaxed">
-                Objetos que carregam energia. Peças para conectar 
+                Objetos que carregam energia. Peças para conectar
                 pessoas à natureza e ao momento presente.
               </p>
             </div>
@@ -156,7 +157,113 @@ export default function Home() {
         </div>
       </section>
 
-            {/* ===== COMO FUNCIONA ===== */}
+            {/* SOBRE A DONA */}
+      <section className="py-24 px-4 bg-[#FAF7F2] relative overflow-hidden">
+        <div className="absolute top-20 right-10 w-64 h-64 bg-[#A895B5]/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 left-10 w-80 h-80 bg-[#7A8B6F]/10 rounded-full blur-3xl"></div>
+
+        <div className="max-w-6xl mx-auto relative z-10">
+          <div className="text-center mb-16">
+            <span className="text-sm font-semibold text-[#A895B5] tracking-wider uppercase mb-4 block">Quem Faz Acontecer</span>
+            <h3 className="text-4xl md:text-5xl font-light text-[#3D3D3D]">
+              Conheça a <span className="font-semibold text-[#7A8B6F]">alma</span> por trás da ECOA
+            </h3>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* FOTO DA DONA */}
+            <div className="relative">
+              <div className="relative mx-auto max-w-md">
+                {/* Moldura decorativa atrás */}
+                <div className="absolute -top-4 -left-4 w-full h-full bg-gradient-to-br from-[#A895B5] to-[#7A8B6F] rounded-3xl"></div>
+                
+                {/* Foto principal */}
+                <div className="relative aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl border-8 border-white">
+                  {/* SUBSTITUA O SRC ABAIXO PELA FOTO REAL DA DONA */}
+                  <img 
+                    src="/dona-ecoa.jpg" 
+                    alt="Dona da ECOA"
+                    className="w-full h-full object-cover"
+                  />
+                  
+                  {/* Overlay gradiente suave no bottom */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+                </div>
+
+                {/* Card flutuante com nome */}
+                <div className="absolute -bottom-6 -right-6 bg-white p-5 rounded-2xl shadow-xl border border-[#A895B5]/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#A895B5] to-[#7A8B6F] rounded-full flex items-center justify-center">
+                      <Heart className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-[#3D3D3D]">Artesã</p>
+                      <p className="text-sm text-[#A895B5]">desde 2022</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Badge decorativo */}
+                <div className="absolute -top-6 -left-6 bg-[#8FA895] p-4 rounded-2xl shadow-xl">
+                  <Sprout className="w-8 h-8 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* TEXTO SOBRE A DONA */}
+            <div>
+              <div className="inline-block bg-[#A895B5]/10 px-4 py-2 rounded-full mb-6">
+                <span className="text-sm font-semibold text-[#A895B5]">A artesã</span>
+              </div>
+
+              <h4 className="text-3xl md:text-4xl font-bold text-[#3D3D3D] mb-4 leading-tight">
+                Olá, sou a <span className="text-[#7A8B6F]">Daiany Oliveira</span>
+              </h4>
+
+              <p className="text-lg text-gray-700 mb-4 leading-relaxed">
+                Há mais de 4 anos descobri na cerâmica uma forma de conectar pessoas à natureza. 
+                Cada peça que crio carrega um pouco da minha história, do meu amor pelo trabalho manual 
+                e do respeito pelos materiais naturais.
+              </p>
+
+              <p className="text-lg text-gray-700 mb-6 leading-relaxed">
+                A ECOA nasceu do meu desejo de criar objetos que contam histórias. 
+                Acredito que quando você tem uma peça feita à mão em casa, 
+                você tem um pedacinho de alma e intenção.
+              </p>
+
+              {/* Citação destacada */}
+              <div className="bg-gradient-to-br from-[#7A8B6F] to-[#8FA895] p-6 rounded-2xl text-white mb-6 relative">
+                <div className="absolute -top-3 left-6 text-6xl text-white/30 font-serif">"</div>
+                <p className="italic text-lg leading-relaxed relative z-10">
+                  Lorem ipsum dolor sit, amet consectetur adipisicing elit. Unde sapiente deserunt minima debitis modi quae et assumenda, delectus, tempora ullam eum doloremque molestiae vel officiis odio error autem nisi voluptatem.
+                </p>
+                <p className="text-sm text-white/80 mt-3 font-semibold">
+                  — Daiany Oliveira, fundadora da ECOA
+                </p>
+              </div>
+
+              {/* Stats pessoais */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-white rounded-2xl shadow-sm border border-[#A895B5]/20">
+                  <div className="text-2xl font-bold text-[#7A8B6F] mb-1">4+</div>
+                  <div className="text-xs text-gray-600">Anos de experiência</div>
+                </div>
+                <div className="text-center p-4 bg-white rounded-2xl shadow-sm border border-[#A895B5]/20">
+                  <div className="text-2xl font-bold text-[#A895B5] mb-1">100+</div>
+                  <div className="text-xs text-gray-600">Peças criadas</div>
+                </div>
+                <div className="text-center p-4 bg-white rounded-2xl shadow-sm border border-[#A895B5]/20">
+                  <div className="text-2xl font-bold text-[#8FA895] mb-1">100%</div>
+                  <div className="text-xs text-gray-600">Feito à mão</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* COMO FUNCIONA */}
       <section id="como-funciona" className="relative pb-32 px-4 bg-gradient-to-br from-[#7A8B6F] via-[#8FA895] to-[#A895B5]">
         <div className="max-w-6xl mx-auto pt-24">
           <div className="text-center mb-16">
@@ -205,25 +312,25 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ONDA DE TRANSIÇÃO */}
+        {/* ONDA DE TRANSIÇÃO - Verde → Lilás */}
         <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none">
-          <svg 
-            className="relative block w-full h-[120px]" 
-            xmlns="http://www.w3.org/2000/svg" 
-            viewBox="0 0 1200 120" 
+          <svg
+            className="relative block w-full h-[120px]"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1200 120"
             preserveAspectRatio="none"
           >
-            <path 
-              d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V0C73.71,22.09,142.84,46.57,214.34,56.44Z" 
+            <path
+              d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V0C73.71,22.09,142.84,46.57,214.34,56.44Z"
               className="fill-[#A895B5]"
             ></path>
           </svg>
         </div>
       </section>
 
-      {/* ===== CTA FINAL ===== */}
-      <section className="py-24 px-4 bg-gradient-to-br from-[#A895B5] to-[#9B8AA8]">
-        <div className="max-w-4xl mx-auto text-center">
+      {/* CTA FINAL - ROXA com onda verde descendo */}
+      <section className="relative pb-16 px-4 bg-gradient-to-br from-[#A895B5] to-[#9B8AA8] overflow-hidden">
+        <div className="max-w-4xl mx-auto text-center py-12">
           <h3 className="text-4xl md:text-5xl font-light text-white mb-6 leading-tight">
             Pronto para ter uma peça <br />
             <span className="font-semibold">ECOA</span> na sua casa?
@@ -235,9 +342,58 @@ export default function Home() {
             Explorar Peças <ArrowRight size={20} />
           </Link>
         </div>
+
+        {/* ONDA VERDE DESCENDO */}
+        <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none">
+          <svg
+            className="relative block w-full h-[60px]"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1200 120"
+            preserveAspectRatio="none"
+          >
+            <path
+              d="M0,60 C200,120 400,0 600,60 C800,120 1000,0 1200,60 L1200,120 L0,120 Z"
+              className="fill-[#7A8B6F]"
+            ></path>
+          </svg>
+        </div>
       </section>
 
-      {/* ===== FOOTER ===== */}
+      {/* SEÇÃO DE CONTATO - VERDE */}
+      <section className="px-4 bg-gradient-to-br from-[#7A8B6F] to-[#8FA895]">
+        <div className="max-w-4xl mx-auto text-center py-20">
+          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full mb-6 border border-white/30">
+            <MessageCircle className="w-5 h-5 text-white" />
+            <span className="text-sm text-white font-medium">Fale diretamente conosco</span>
+          </div>
+
+          <h3 className="text-4xl md:text-5xl font-light text-white mb-6 leading-tight">
+            Tem alguma dúvida? <br />
+            <span className="font-semibold">Estamos aqui para ajudar!</span>
+          </h3>
+
+          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+            Converse pelo WhatsApp e tire todas as suas dúvidas sobre nossas peças,
+            materiais, entrega e muito mais.
+          </p>
+
+          <a
+            href={'https://wa.me/' + process.env.NEXT_PUBLIC_WHATSAPP_NUMBER + '?text=' + encodeURIComponent('Ola! Vim pelo site da ECOA e gostaria de mais informacoes.')}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-[#25D366] hover:bg-[#20BD5A] text-white px-8 py-4 rounded-full font-bold text-lg inline-flex items-center gap-3 transition-all hover:scale-105 shadow-2xl hover:shadow-[#25D366]/50"
+          >
+            <MessageCircle size={24} className="fill-white" />
+            Chamar no WhatsApp
+          </a>
+
+          <p className="text-white/70 text-sm mt-6">
+            Respondemos rapidamente em horário comercial
+          </p>
+        </div>
+      </section>
+
+      {/* FOOTER - PRETO */}
       <footer className="bg-[#3D3D3D] text-white py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-3 gap-8 mb-8">
@@ -247,7 +403,7 @@ export default function Home() {
                 <h4 className="text-xl font-bold tracking-widest">ECOA</h4>
               </div>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Cerâmica artesanal feita com amor e sustentabilidade. 
+                Cerâmica artesanal feita com amor e sustentabilidade.
                 Cada peça carrega a essência da natureza.
               </p>
             </div>
@@ -263,10 +419,22 @@ export default function Home() {
 
             <div>
               <h5 className="font-semibold mb-4 text-[#8FA895]">Contato</h5>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li className="flex items-center gap-2">
-                  <MessageCircle size={16} />
-                  <span>WhatsApp direto</span>
+              <ul className="space-y-3 text-sm text-gray-400">
+                <li>
+                  <a
+                    href={'https://wa.me/' + process.env.NEXT_PUBLIC_WHATSAPP_NUMBER + '?text=' + encodeURIComponent('Ola! Vim pelo site da ECOA e gostaria de saber mais.')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 hover:text-[#25D366] transition-colors group"
+                  >
+                    <div className="bg-[#25D366]/20 p-2 rounded-full group-hover:bg-[#25D366]/30 transition-colors">
+                      <MessageCircle size={16} className="text-[#25D366]" />
+                    </div>
+                    <span className="font-medium">WhatsApp direto</span>
+                  </a>
+                </li>
+                <li className="text-xs text-gray-500 mt-2">
+                  Respondemos em até 24h
                 </li>
               </ul>
             </div>
@@ -277,6 +445,9 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* BOTÃO FLUTUANTE DE WHATSAPP */}
+      <WhatsAppButton />
     </main>
   );
 }

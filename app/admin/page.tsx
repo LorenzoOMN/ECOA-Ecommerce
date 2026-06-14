@@ -1,18 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { useRouter } from 'next/navigation';  // ← ADICIONE ISSO se não tiver
-import { Upload, Save, ArrowLeft, Edit2, Trash2, X, Package, Image as ImageIcon, Plus, ArrowUp, ArrowDown } from 'lucide-react';
+import { Upload, Save, ArrowLeft, Edit2, Trash2, X, Package, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import Modal from '../components/Modal';
-
-interface Imagem {
-    id?: string;
-    url: string;
-    ordem: number;
-    file?: File;
-    isExisting?: boolean;
-}
 
 interface Produto {
     id: string;
@@ -20,14 +11,16 @@ interface Produto {
     descricao: string;
     preco: number;
     imagem_url: string;
-    imagens?: Imagem[];
 }
 
 export default function Admin() {
-    const [autenticado, setAutenticado] = useState(false);
+    const [user, setUser] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
+    const [loginError, setLoginError] = useState('');
+    
     const [produtos, setProdutos] = useState<Produto[]>([]);
-    const [loading, setLoading] = useState(false);
     const [modoEdicao, setModoEdicao] = useState(false);
     const [produtoEditando, setProdutoEditando] = useState<string | null>(null);
 
@@ -47,69 +40,72 @@ export default function Admin() {
     const [nome, setNome] = useState('');
     const [descricao, setDescricao] = useState('');
     const [preco, setPreco] = useState('');
-    const [imagens, setImagens] = useState<Imagem[]>([]);
+    const [imagem, setImagem] = useState<File | null>(null);
+    const [imagemAtual, setImagemAtual] = useState<string>('');
 
-    const router = useRouter();
-
+    // Verificar se está logado
     useEffect(() => {
-        if (autenticado) {
+        const checkUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user || null);
+            setLoading(false);
+        };
+        checkUser();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user || null);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    // Carregar produtos quando logar
+    useEffect(() => {
+        if (user) {
             carregarProdutos();
         }
-    }, [autenticado]);
+    }, [user]);
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoginError('');
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password: senha,
+        });
+
+        if (error) {
+            setLoginError('Email ou senha incorretos');
+            setModal({
+                isOpen: true,
+                title: 'Erro no login',
+                message: 'Email ou senha incorretos. Tente novamente.',
+                type: 'error',
+            });
+        } else {
+            setUser(data.user);
+        }
+    };
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        setUser(null);
+        setEmail('');
+        setSenha('');
+    };
 
     const carregarProdutos = async () => {
         try {
-            const { data: produtosData, error } = await supabase
+            const { data, error } = await supabase
                 .from('produtos')
                 .select('*')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-
-            // Carregar imagens de cada produto
-            const produtosComImagens = await Promise.all(
-                (produtosData || []).map(async (produto) => {
-                    const { data: imagensData } = await supabase
-                        .from('produto_imagens')
-                        .select('*')
-                        .eq('produto_id', produto.id)
-                        .order('ordem', { ascending: true });
-
-                    return {
-                        ...produto,
-                        imagens: (imagensData || []).map((img) => ({
-                            id: img.id,
-                            url: img.imagem_url,
-                            ordem: img.ordem,
-                            isExisting: true,
-                        })),
-                    };
-                })
-            );
-
-            setProdutos(produtosComImagens);
+            setProdutos(data || []);
         } catch (error) {
             console.error('Erro ao carregar produtos:', error);
-            setModal({
-                isOpen: true,
-                title: 'Erro ao carregar',
-                message: 'Nao foi possivel carregar a lista de produtos.',
-                type: 'error',
-            });
-        }
-    };
-
-    const handleLogin = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (senha === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
-            setAutenticado(true);
-        } else {
-            setModal({
-                isOpen: true,
-                title: 'Senha incorreta',
-                message: 'A senha digitada nao esta correta.',
-                type: 'error',
-            });
         }
     };
 
@@ -117,40 +113,10 @@ export default function Admin() {
         setNome('');
         setDescricao('');
         setPreco('');
-        setImagens([]);
+        setImagem(null);
+        setImagemAtual('');
         setModoEdicao(false);
         setProdutoEditando(null);
-    };
-
-    const adicionarImagens = (files: FileList | null) => {
-        if (!files) return;
-        const novasImagens: Imagem[] = Array.from(files).map((file, index) => ({
-            url: URL.createObjectURL(file),
-            ordem: imagens.length + index,
-            file,
-            isExisting: false,
-        }));
-        setImagens([...imagens, ...novasImagens]);
-    };
-
-    const removerImagem = (index: number) => {
-        setImagens(imagens.filter((_, i) => i !== index));
-    };
-
-    const moverImagem = (index: number, direcao: 'up' | 'down') => {
-        const novasImagens = [...imagens];
-        const targetIndex = direcao === 'up' ? index - 1 : index + 1;
-        
-        if (targetIndex < 0 || targetIndex >= novasImagens.length) return;
-        
-        [novasImagens[index], novasImagens[targetIndex]] = [novasImagens[targetIndex], novasImagens[index]];
-        
-        // Atualizar ordem
-        novasImagens.forEach((img, i) => {
-            img.ordem = i;
-        });
-        
-        setImagens(novasImagens);
     };
 
     const handleUpload = async (e: React.FormEvent) => {
@@ -158,18 +124,8 @@ export default function Admin() {
         if (!nome || !preco) {
             setModal({
                 isOpen: true,
-                title: 'Campos obrigatorios',
-                message: 'Por favor, preencha o nome e o preco da peca.',
-                type: 'warning',
-            });
-            return;
-        }
-
-        if (imagens.length === 0) {
-            setModal({
-                isOpen: true,
-                title: 'Imagem obrigatoria',
-                message: 'Adicione pelo menos uma imagem da peca.',
+                title: 'Campos obrigatórios',
+                message: 'Por favor, preencha o nome e o preço.',
                 type: 'warning',
             });
             return;
@@ -177,136 +133,62 @@ export default function Admin() {
 
         setLoading(true);
         try {
-            let produtoId = produtoEditando;
-            const imagemPrincipal = imagens[0].isExisting ? imagens[0].url : null;
+            let imagem_url = imagemAtual;
 
-            // CREATE ou UPDATE do produto
+            if (imagem) {
+                const fileExt = imagem.name.split('.').pop();
+                const fileName = Date.now() + '.' + fileExt;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('imagens-produtos')
+                    .upload(fileName, imagem);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('imagens-produtos')
+                    .getPublicUrl(fileName);
+
+                imagem_url = publicUrl;
+            }
+
             if (modoEdicao && produtoEditando) {
-                const updateData: any = {
-                    nome,
-                    descricao,
-                    preco: parseFloat(preco.replace(',', '.')),
-                };
-                
-                // Atualizar imagem principal se a primeira imagem for nova
-                if (!imagens[0].isExisting) {
-                    updateData.imagem_url = null; // Será atualizado depois
-                }
-                
                 const { error: dbError } = await supabase
                     .from('produtos')
-                    .update(updateData)
+                    .update({ nome, descricao, preco: parseFloat(preco.replace(',', '.')), imagem_url })
                     .eq('id', produtoEditando);
 
                 if (dbError) throw dbError;
 
-                // Excluir imagens antigas que foram removidas
-                const { data: imagensExistentes } = await supabase
-                    .from('produto_imagens')
-                    .select('id')
-                    .eq('produto_id', produtoEditando);
-
-                const idsMantidos = imagens
-                    .filter(img => img.isExisting && img.id)
-                    .map(img => img.id);
-
-                if (imagensExistentes) {
-                    for (const img of imagensExistentes) {
-                        if (!idsMantidos.includes(img.id)) {
-                            await supabase.from('produto_imagens').delete().eq('id', img.id);
-                        }
-                    }
-                }
+                setModal({
+                    isOpen: true,
+                    title: 'Produto atualizado!',
+                    message: 'A peça "' + nome + '" foi atualizada.',
+                    type: 'success',
+                });
             } else {
-                const { data: novoProduto, error: dbError } = await supabase
+                const { error: dbError } = await supabase
                     .from('produtos')
-                    .insert({
-                        nome,
-                        descricao,
-                        preco: parseFloat(preco.replace(',', '.')),
-                        imagem_url: '',
-                    })
-                    .select()
-                    .single();
+                    .insert({ nome, descricao, preco: parseFloat(preco.replace(',', '.')), imagem_url });
 
                 if (dbError) throw dbError;
-                produtoId = novoProduto.id;
+
+                setModal({
+                    isOpen: true,
+                    title: 'Produto cadastrado!',
+                    message: 'A peça "' + nome + '" foi adicionada.',
+                    type: 'success',
+                });
             }
-
-            // Upload de novas imagens
-            const imagensFinais: Imagem[] = [];
-            for (let i = 0; i < imagens.length; i++) {
-                const img = imagens[i];
-                
-                if (img.isExisting && img.id) {
-                    // Imagem existente - apenas atualizar ordem
-                    await supabase
-                        .from('produto_imagens')
-                        .update({ ordem: i })
-                        .eq('id', img.id);
-                    
-                    imagensFinais.push({ ...img, ordem: i });
-                } else if (img.file) {
-                    // Imagem nova - fazer upload
-                    const fileExt = img.file.name.split('.').pop();
-                    const fileName = Date.now() + '_' + i + '.' + fileExt;
-
-                    const { error: uploadError } = await supabase.storage
-                        .from('imagens-produtos')
-                        .upload(fileName, img.file);
-
-                    if (uploadError) throw uploadError;
-
-                    const { data: { publicUrl } } = supabase.storage
-                        .from('imagens-produtos')
-                        .getPublicUrl(fileName);
-
-                    // Inserir no banco
-                    const { data: novaImagem, error: imgError } = await supabase
-                        .from('produto_imagens')
-                        .insert({
-                            produto_id: produtoId,
-                            imagem_url: publicUrl,
-                            ordem: i,
-                        })
-                        .select()
-                        .single();
-
-                    if (imgError) throw imgError;
-
-                    imagensFinais.push({
-                        id: novaImagem.id,
-                        url: publicUrl,
-                        ordem: i,
-                        isExisting: true,
-                    });
-                }
-            }
-
-            // Atualizar imagem principal do produto (primeira imagem)
-            if (imagensFinais.length > 0) {
-                await supabase
-                    .from('produtos')
-                    .update({ imagem_url: imagensFinais[0].url })
-                    .eq('id', produtoId);
-            }
-
-            setModal({
-                isOpen: true,
-                title: modoEdicao ? 'Produto atualizado!' : 'Produto cadastrado!',
-                message: 'A peca "' + nome + '" foi salva com sucesso.',
-                type: 'success',
-            });
 
             resetarFormulario();
             await carregarProdutos();
 
         } catch (error: any) {
-            console.error(error);
             setModal({
                 isOpen: true,
                 title: 'Erro ao salvar',
-                message: error.message || 'Ocorreu um erro ao salvar o produto.',
+                message: error.message || 'Erro ao salvar produto.',
                 type: 'error',
             });
         } finally {
@@ -320,7 +202,8 @@ export default function Admin() {
         setNome(produto.nome);
         setDescricao(produto.descricao || '');
         setPreco(produto.preco.toString());
-        setImagens(produto.imagens || []);
+        setImagemAtual(produto.imagem_url);
+        setImagem(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -328,30 +211,11 @@ export default function Admin() {
         setModal({
             isOpen: true,
             title: 'Excluir produto?',
-            message: 'Tem certeza que deseja excluir "' + nome + '"? Esta acao nao pode ser desfeita.',
+            message: 'Tem certeza que deseja excluir "' + nome + '"?',
             type: 'confirm',
             onConfirm: async () => {
                 setLoading(true);
                 try {
-                    // Excluir imagens do storage
-                    const { data: imagensProduto } = await supabase
-                        .from('produto_imagens')
-                        .select('imagem_url')
-                        .eq('produto_id', id);
-
-                    if (imagensProduto) {
-                        const fileNames = imagensProduto
-                            .map(img => img.imagem_url.split('/').pop())
-                            .filter(Boolean) as string[];
-                        
-                        if (fileNames.length > 0) {
-                            await supabase.storage
-                                .from('imagens-produtos')
-                                .remove(fileNames);
-                        }
-                    }
-
-                    // Excluir do banco (CASCADE vai deletar produto_imagens)
                     const { error } = await supabase
                         .from('produtos')
                         .delete()
@@ -361,8 +225,8 @@ export default function Admin() {
 
                     setModal({
                         isOpen: true,
-                        title: 'Produto excluido!',
-                        message: 'A peca "' + nome + '" foi removida.',
+                        title: 'Produto excluído!',
+                        message: 'A peça "' + nome + '" foi removida.',
                         type: 'success',
                     });
 
@@ -371,7 +235,7 @@ export default function Admin() {
                     setModal({
                         isOpen: true,
                         title: 'Erro ao excluir',
-                        message: error.message || 'Nao foi possivel excluir.',
+                        message: error.message || 'Erro ao excluir.',
                         type: 'error',
                     });
                 } finally {
@@ -389,24 +253,65 @@ export default function Admin() {
         setModal({ ...modal, isOpen: false });
     };
 
-    if (!autenticado) {
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
+                <p className="text-gray-500">Carregando...</p>
+            </div>
+        );
+    }
+
+    // TELA DE LOGIN
+    if (!user) {
         return (
             <>
-                <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
-                    <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-[#A895B5]">
-                        <h2 className="text-2xl font-bold text-center mb-6 text-[#3D3D3D]">Acesso ECOA</h2>
-                        <input
-                            type="password"
-                            placeholder="Digite a senha"
-                            className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-[#A895B5]"
-                            value={senha}
-                            onChange={(e) => setSenha(e.target.value)}
-                        />
-                        <button type="submit" className="w-full btn-lilas">Entrar</button>
+                <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2] p-4">
+                    <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-[#A895B5]">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-gradient-to-br from-[#A895B5] to-[#7A8B6F] rounded-full flex items-center justify-center mx-auto mb-4">
+                                <LogOut className="w-8 h-8 text-white" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-[#3D3D3D]">Área Restrita</h2>
+                            <p className="text-sm text-gray-500 mt-2">Faça login para acessar o painel administrativo</p>
+                        </div>
+                        
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input
+                                    type="email"
+                                    required
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#A895B5]"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="admin@ecoa.com"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                                <input
+                                    type="password"
+                                    required
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#A895B5]"
+                                    value={senha}
+                                    onChange={(e) => setSenha(e.target.value)}
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                            
+                            {loginError && (
+                                <p className="text-red-500 text-sm text-center">{loginError}</p>
+                            )}
+                            
+                            <button type="submit" className="w-full btn-lilas">
+                                Entrar
+                            </button>
+                        </form>
+                        
                         <Link href="/" className="block text-center mt-4 text-sm text-gray-500 hover:underline">
                             Voltar para o site
                         </Link>
-                    </form>
+                    </div>
                 </div>
                 <Modal
                     isOpen={modal.isOpen}
@@ -420,6 +325,7 @@ export default function Admin() {
         );
     }
 
+    // PAINEL ADMIN
     return (
         <>
             <main className="min-h-screen bg-[#FAF7F2] p-4 md:p-8">
@@ -429,19 +335,20 @@ export default function Admin() {
                             <ArrowLeft size={20} /> Voltar para a loja
                         </Link>
                         <button
-                            onClick={() => { setAutenticado(false); setSenha(''); }}
-                            className="text-sm text-gray-500 hover:text-[#A895B5]"
+                            onClick={handleLogout}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 rounded-lg font-medium hover:bg-red-200 transition-colors text-sm"
                         >
+                            <LogOut size={16} />
                             Sair
                         </button>
                     </div>
 
                     <div className="mb-8">
                         <h1 className="text-3xl md:text-4xl font-bold text-[#3D3D3D] mb-2">
-                            {modoEdicao ? 'Editar Produto' : 'Cadastrar Nova Peca'}
+                            {modoEdicao ? 'Editar Produto' : 'Cadastrar Nova Peça'}
                         </h1>
                         <p className="text-gray-600">
-                            {modoEdicao ? 'Altere os dados do produto abaixo.' : 'Preencha os dados para adicionar uma nova peca.'}
+                            Logado como: <span className="font-semibold text-[#7A8B6F]">{user.email}</span>
                         </p>
                     </div>
 
@@ -450,12 +357,12 @@ export default function Admin() {
                         <div className="bg-white p-8 rounded-2xl shadow-md border border-[#A895B5]/30">
                             <h2 className="text-xl font-bold mb-6 text-[#3D3D3D] flex items-center gap-2">
                                 <Upload size={24} className="text-[#8FA895]" />
-                                {modoEdicao ? 'Editar Peca' : 'Nova Peca'}
+                                {modoEdicao ? 'Editar Peça' : 'Nova Peça'}
                             </h2>
 
                             <form onSubmit={handleUpload} className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Peca *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Peça *</label>
                                     <input
                                         type="text"
                                         required
@@ -467,18 +374,18 @@ export default function Admin() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Descricao</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
                                     <textarea
                                         rows={3}
                                         className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8FA895]"
                                         value={descricao}
                                         onChange={(e) => setDescricao(e.target.value)}
-                                        placeholder="Descreva a peca, materiais, dimensoes..."
+                                        placeholder="Descreva a peça..."
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Preco (R$) *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Preço (R$) *</label>
                                     <input
                                         type="number"
                                         step="0.01"
@@ -490,89 +397,34 @@ export default function Admin() {
                                     />
                                 </div>
 
-                                {/* GALERIA DE IMAGENS */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        <ImageIcon size={16} className="inline mr-1" />
-                                        Imagens da Peca * (a primeira sera a capa)
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        {modoEdicao ? 'Nova Foto (opcional)' : 'Foto da Peça *'}
                                     </label>
-                                    
                                     <input
                                         type="file"
                                         accept="image/*"
-                                        multiple
-                                        className="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 mb-3"
-                                        onChange={(e) => adicionarImagens(e.target.files)}
+                                        className="w-full p-2 border border-gray-300 rounded-lg bg-gray-50"
+                                        onChange={(e) => setImagem(e.target.files ? e.target.files[0] : null)}
                                     />
-
-                                    {imagens.length > 0 && (
-                                        <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                                            {imagens.map((img, index) => (
-                                                <div 
-                                                    key={index}
-                                                    className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg border border-gray-200"
-                                                >
-                                                    <img
-                                                        src={img.url}
-                                                        alt={`Imagem ${index + 1}`}
-                                                        className="w-16 h-16 object-cover rounded border border-gray-200"
-                                                    />
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-xs text-gray-600">
-                                                            {index === 0 ? '⭐ Imagem de capa' : `Imagem ${index + 1}`}
-                                                        </p>
-                                                        <p className="text-xs text-gray-400 truncate">
-                                                            {img.isExisting ? 'Ja salva' : 'Nova'}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex gap-1">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => moverImagem(index, 'up')}
-                                                            disabled={index === 0}
-                                                            className="p-1 text-gray-500 hover:text-[#7A8B6F] disabled:opacity-30"
-                                                            title="Mover para cima"
-                                                        >
-                                                            <ArrowUp size={16} />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => moverImagem(index, 'down')}
-                                                            disabled={index === imagens.length - 1}
-                                                            className="p-1 text-gray-500 hover:text-[#7A8B6F] disabled:opacity-30"
-                                                            title="Mover para baixo"
-                                                        >
-                                                            <ArrowDown size={16} />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removerImagem(index)}
-                                                            className="p-1 text-red-500 hover:text-red-700"
-                                                            title="Remover"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                    {imagemAtual && !imagem && (
+                                        <div className="mt-2">
+                                            <p className="text-xs text-gray-500 mb-1">Imagem atual:</p>
+                                            <img src={imagemAtual} alt="Atual" className="w-24 h-24 object-cover rounded-lg border border-gray-200" />
                                         </div>
                                     )}
                                 </div>
 
                                 <div className="flex gap-3 pt-4">
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="flex-1 btn-lilas disabled:opacity-50"
-                                    >
+                                    <button type="submit" disabled={loading} className="flex-1 btn-lilas disabled:opacity-50">
                                         {loading ? 'Salvando...' : (
                                             <>
                                                 <Save size={18} />
-                                                {modoEdicao ? 'Atualizar Peca' : 'Salvar Peca'}
+                                                {modoEdicao ? 'Atualizar Peça' : 'Salvar Peça'}
                                             </>
                                         )}
                                     </button>
-
+                                    
                                     {modoEdicao && (
                                         <button
                                             type="button"
@@ -600,14 +452,15 @@ export default function Admin() {
                                     <p>Nenhum produto cadastrado ainda.</p>
                                 </div>
                             ) : (
-                                <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2">
+                                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
                                     {produtos.map((produto) => (
                                         <div
                                             key={produto.id}
-                                            className={`border rounded-xl p-4 transition-all ${produtoEditando === produto.id
+                                            className={`border rounded-xl p-4 transition-all ${
+                                                produtoEditando === produto.id
                                                     ? 'border-[#A895B5] bg-[#A895B5]/5'
                                                     : 'border-gray-200 hover:border-[#8FA895]'
-                                                }`}
+                                            }`}
                                         >
                                             <div className="flex gap-4">
                                                 <img
@@ -615,22 +468,14 @@ export default function Admin() {
                                                     alt={produto.nome}
                                                     className="w-20 h-20 object-cover rounded-lg border border-gray-200 flex-shrink-0"
                                                 />
-
                                                 <div className="flex-1 min-w-0">
                                                     <h3 className="font-semibold text-[#3D3D3D] truncate">{produto.nome}</h3>
                                                     <p className="text-sm text-gray-600 line-clamp-2 mt-1">
-                                                        {produto.descricao || 'Sem descricao'}
+                                                        {produto.descricao || 'Sem descrição'}
                                                     </p>
-                                                    <div className="flex items-center gap-3 mt-2">
-                                                        <p className="text-lg font-bold text-[#7A8B6F]">
-                                                            {formatarPreco(produto.preco)}
-                                                        </p>
-                                                        {produto.imagens && produto.imagens.length > 1 && (
-                                                            <span className="text-xs bg-[#A895B5]/20 text-[#A895B5] px-2 py-1 rounded-full">
-                                                                {produto.imagens.length} fotos
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                    <p className="text-lg font-bold text-[#7A8B6F] mt-2">
+                                                        {formatarPreco(produto.preco)}
+                                                    </p>
                                                 </div>
                                             </div>
 
