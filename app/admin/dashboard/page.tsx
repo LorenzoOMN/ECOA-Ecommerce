@@ -587,7 +587,7 @@ export default function Dashboard() {
                             </div>
                         )}
                     </div>
-
+                    
                     {/* Top Produtos */}
                     <div className="bg-white p-6 rounded-2xl shadow-md border border-[#927F96]/20">
                         <h2 className="text-xl font-bold text-[#3D3D3D] flex items-center gap-2 mb-6">
